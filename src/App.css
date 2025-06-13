@@ -128,3 +128,41 @@ h1, h2, h3 {
   background-color: #1abc9c;
   transition: width 0.2s ease-out;
 }
+
+@media (max-width: 768px) {
+  .App {
+    padding: 1rem;
+  }
+
+  .admin, .player, .lobby, .victory, .home {
+    padding: 1rem;
+    margin: 1rem;
+    max-width: 95vw;
+  }
+
+  input[type="text"],
+  input[type="range"] {
+    width: 100%;
+    font-size: 1rem;
+  }
+
+  button {
+    width: 100%;
+    margin: 0.5rem 0;
+    font-size: 1rem;
+  }
+
+  iframe {
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  .progress-bar-container {
+    height: 8px;
+  }
+
+  .countdown-number {
+    font-size: 5rem;
+  }
+}
+
