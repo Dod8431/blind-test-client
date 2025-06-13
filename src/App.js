@@ -259,7 +259,7 @@ export default function App() {
         ))}
       </ul>
       <h3>Classement</h3>
-<ol>
+<ol className="score-animated">
   {[...players]
     .filter((p) => !p.admin) // ← on exclut l’admin
     .sort((a, b) => b.score - a.score)
@@ -324,7 +324,7 @@ export default function App() {
         ))}
       </ul>
       <h3>Classement</h3>
-<ol>
+<ol className="score-animated">
   {[...players]
     .filter((p) => !p.admin) // ← on exclut l’admin
     .sort((a, b) => b.score - a.score)
