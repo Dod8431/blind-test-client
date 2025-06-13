@@ -450,16 +450,13 @@ const handleLaunchVideo = () => {
   onKeyDown={handleGuessSubmit}
 />
       <h3>Historique</h3>
-      <ul>
-        {eventLog.map((e, idx) => (
-          <li
-            key={idx}
-            style={{ color: e.type === "rejected" ? "red" : "green" }}
-          >
-            {e.pseudo} : {e.detail}
-          </li>
-        ))}
-      </ul>
+<ul className="event-log">
+  {eventLog.map((e, idx) => (
+    <li key={idx} className={e.type}>
+      <strong>{e.pseudo}</strong> : {e.detail}
+    </li>
+  ))}
+</ul>
       <h3>Classement</h3>
 <ol className="score-animated">
   {[...players]
