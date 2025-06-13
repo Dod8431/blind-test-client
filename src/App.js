@@ -290,12 +290,24 @@ const handleLaunchVideo = () => {
         value={inputLink}
         onChange={(e) => setInputLink(e.target.value)}
       />
-      <button onClick={handleLaunchVideo} disabled={loading}>
-  Lancer
-  {loading && <span className="spinner" />}
-</button>
-      <button onClick={handleSkipVideo}>⏭️ Skip</button>
-      <button onClick={handleForceReveal}>🎬 Reveal</button>
+<div className="admin-controls">
+  <button
+    onClick={handleLaunchVideo}
+    className="admin-button btn-launch"
+    disabled={loading}
+  >
+    ▶️ Lancer
+    {loading && <span className="spinner" />}
+  </button>
+
+  <button onClick={handleForceReveal} className="admin-button btn-reveal">
+    🎬 Reveal
+  </button>
+
+  <button onClick={handleSkipVideo} className="admin-button btn-skip">
+    ⏭️ Skip
+  </button>
+</div>
       {countdownActive && <Countdown />}
       {currentVideoId && (
   <div className="progress-bar-container">
