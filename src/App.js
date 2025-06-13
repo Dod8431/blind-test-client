@@ -26,6 +26,7 @@ export default function App() {
   const [winners, setWinners] = useState([]);
   const [volume, setVolume] = useState(50);
   const [isMuted, setMuted] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [history, setHistory] = useState([]);
   const [flashPlayer, setFlashPlayer] = useState(null);
@@ -48,12 +49,14 @@ export default function App() {
 
   useEffect(() => {
     socket.on("roomCreated", ({ roomCode }) => {
+      setLoading(false);
       setRoomCode(roomCode);
       setIsAdmin(true);
       setView("lobby");
     });
 
     socket.on("roomJoined", ({ roomCode }) => {
+      setLoading(false);
       setRoomCode(roomCode);
       setView("lobby");
     });
@@ -171,30 +174,37 @@ socket.on("guessValidated", ({ pseudo, guess, type }) => {
     return () => socket.removeAllListeners();
   }, [isAdmin]);
 
-  const handleCreateRoom = () => {
-    if (pseudo.trim()) socket.emit("createRoom", { pseudo });
-  };
+const handleCreateRoom = () => {
+  if (pseudo.trim()) {
+    setLoading(true);
+    socket.emit("createRoom", { pseudo });
+  }
+};
 
-  const handleJoinRoom = () => {
-    if (pseudo.trim() && joinCode.trim())
-      socket.emit("joinRoom", { pseudo, roomCode: joinCode.toUpperCase() });
-  };
+const handleJoinRoom = () => {
+  if (pseudo.trim() && joinCode.trim()) {
+    setLoading(true);
+    socket.emit("joinRoom", { pseudo, roomCode: joinCode.toUpperCase() });
+  }
+};
 
   const handleStart = () => {
     socket.emit("startGame", { roomCode });
   };
 
-  const handleLaunchVideo = () => {
-    const videoId = extractVideoId(inputLink);
-    if (videoId) {
-      setCurrentVideoId(videoId);
-      setVideoRevealed(false);
-      setGuesses([]);
-      setEventLog([]);
-      socket.emit("playVideo", { roomCode, videoId });
-      setInputLink("");
-    }
-  };
+const handleLaunchVideo = () => {
+  const videoId = extractVideoId(inputLink);
+  if (videoId) {
+    setLoading(true);
+    setCurrentVideoId(videoId);
+    setVideoRevealed(false);
+    setGuesses([]);
+    setEventLog([]);
+    socket.emit("playVideo", { roomCode, videoId });
+    setInputLink("");
+    setTimeout(() => setLoading(false), 1000); // auto-reset après un petit délai
+  }
+};
 
   const handleForceReveal = () => {
     socket.emit("forceReveal", { roomCode });
@@ -275,7 +285,10 @@ socket.on("guessValidated", ({ pseudo, guess, type }) => {
         value={inputLink}
         onChange={(e) => setInputLink(e.target.value)}
       />
-      <button onClick={handleLaunchVideo}>Lancer</button>
+      <button onClick={handleLaunchVideo} disabled={loading}>
+  Lancer
+  {loading && <span className="spinner" />}
+</button>
       <button onClick={handleSkipVideo}>⏭️ Skip</button>
       <button onClick={handleForceReveal}>🎬 Reveal</button>
       {countdownActive && <Countdown />}
@@ -468,7 +481,10 @@ socket.on("guessValidated", ({ pseudo, guess, type }) => {
         onChange={(e) => setPseudo(e.target.value)}
       />
       <div>
-        <button onClick={handleCreateRoom}>Créer une partie</button>
+        <button onClick={handleCreateRoom} disabled={loading}>
+  Créer une partie
+  {loading && <span className="spinner" />}
+</button>
       </div>
       <div>
         <input
@@ -477,7 +493,11 @@ socket.on("guessValidated", ({ pseudo, guess, type }) => {
           value={joinCode}
           onChange={(e) => setJoinCode(e.target.value)}
         />
-        <button onClick={handleJoinRoom}>Rejoindre</button>
+        <button onClick={handleJoinRoom} disabled={loading}>
+  Rejoindre
+  {loading && <span className="spinner" />}
+</button>
+
       </div>
     </div>
   );
