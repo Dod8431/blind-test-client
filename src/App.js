@@ -29,6 +29,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [history, setHistory] = useState([]);
+  const inputRef = useRef(null);
   const [flashPlayer, setFlashPlayer] = useState(null);
     const [theme, setTheme] = useState("dark");
 
@@ -80,6 +81,11 @@ export default function App() {
         setValidatedTypes({});
         setVideoRevealed(false);
         setCountdownActive(false);
+setTimeout(() => {
+  if (inputRef.current) {
+    inputRef.current.focus();
+  }
+}, 500); // petit délai post-countdown
         setProgress(0);
 if (progressInterval.current) clearInterval(progressInterval.current);
 
@@ -397,13 +403,14 @@ const handleLaunchVideo = () => {
         />
         <button onClick={toggleMute}>{isMuted ? "🔇" : "🔊"}</button>
       </div>
-      <input
-        type="text"
-        placeholder="Votre réponse"
-        value={guessInput}
-        onChange={(e) => setGuessInput(e.target.value)}
-        onKeyDown={handleGuessSubmit}
-      />
+<input
+  ref={inputRef}
+  type="text"
+  placeholder="Votre réponse"
+  value={guessInput}
+  onChange={(e) => setGuessInput(e.target.value)}
+  onKeyDown={handleGuessSubmit}
+/>
       <h3>Historique</h3>
       <ul>
         {eventLog.map((e, idx) => (
