@@ -29,6 +29,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [history, setHistory] = useState([]);
+  const [systemMessage, setSystemMessage] = useState(null);
   const inputRef = useRef(null);
   const [flashPlayer, setFlashPlayer] = useState(null);
     const [theme, setTheme] = useState("dark");
@@ -36,6 +37,12 @@ export default function App() {
   const toggleTheme = () => {
   setTheme((prev) => (prev === "dark" ? "light" : "dark"));
 };
+
+const showSystemMessage = (msg, duration = 3000) => {
+  setSystemMessage(msg);
+  setTimeout(() => setSystemMessage(null), duration);
+};
+
   const progressInterval = useRef(null);
 
   const playerRef = useRef(null);
@@ -207,6 +214,7 @@ const handleLaunchVideo = () => {
     setGuesses([]);
     setEventLog([]);
     socket.emit("playVideo", { roomCode, videoId });
+    showSystemMessage("🎵 Nouvelle vidéo lancée !");
     setInputLink("");
     setTimeout(() => setLoading(false), 1000); // auto-reset après un petit délai
   }
@@ -214,11 +222,13 @@ const handleLaunchVideo = () => {
 
   const handleForceReveal = () => {
     socket.emit("forceReveal", { roomCode });
+    showSystemMessage("🎬 Vidéo révélée !");
     setVideoRevealed(true);
   };
 
   const handleSkipVideo = () => {
       socket.emit("skipVideo", { roomCode });
+      showSystemMessage("⏭️ Chanson passée !");
   };
 
   const handleGuessSubmit = (e) => {
@@ -524,11 +534,16 @@ const handleLaunchVideo = () => {
   <button className="theme-toggle" onClick={toggleTheme}>
     🎨 Thème : {theme === "dark" ? "Sombre" : "Clair"}
   </button>
+    {systemMessage && (
+    <div className="system-banner">{systemMessage}</div>
+  )}
 
   {view !== "home" && (
   <div className="role-banner">
     Rôle : {isAdmin ? "Admin 👑" : "Joueur 🎧"}
   </div>
+
+  
 )}
 
   <div className={`App ${theme === "dark" ? "theme-dark" : "theme-light"}`}>
