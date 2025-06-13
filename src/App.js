@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import io from "socket.io-client";
 import YouTube from "react-youtube";
 import Countdown from "./Countdown";
+import confetti from "canvas-confetti";
 import "./App.css";
 
 const socket = io("https://blind-test-server-vvgh.onrender.com");
@@ -159,6 +160,11 @@ socket.on("guessValidated", ({ pseudo, guess, type }) => {
 
     socket.on("endGame", ({ winners }) => {
       setWinners(winners);
+      confetti({
+  particleCount: 150,
+  spread: 70,
+  origin: { y: 0.6 }
+});
       setView("victory");
     });
 
