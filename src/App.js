@@ -26,6 +26,7 @@ export default function App() {
   const [volume, setVolume] = useState(50);
   const [isMuted, setMuted] = useState(true);
   const [progress, setProgress] = useState(0);
+  const [history, setHistory] = useState([]);
   const [flashPlayer, setFlashPlayer] = useState(null);
     const [theme, setTheme] = useState("dark");
 
@@ -68,6 +69,10 @@ export default function App() {
       setCountdownActive(true);
       setTimeout(() => {
         setCurrentVideoId(videoId);
+        setHistory((prev) => [
+  ...prev,
+  { videoId, guesses: [] }
+]);
         setValidatedTypes({});
         setVideoRevealed(false);
         setCountdownActive(false);
@@ -91,6 +96,7 @@ progressInterval.current = setInterval(() => {
       setVideoRevealed(false);
       setGuesses([]);
       setEventLog([]);
+      
       setProgress(0);
 if (progressInterval.current) clearInterval(progressInterval.current);
     });
@@ -119,7 +125,19 @@ socket.on("guessValidated", ({ pseudo, guess, type }) => {
     { type: "validated", pseudo, detail: `${type} : ${guess}` },
   ]);
 
-  // 3. Met à jour les types validés
+  // 3. Met à jour l'historique
+  setHistory((prev) =>
+  prev.map((entry, i) =>
+    i === prev.length - 1
+      ? {
+          ...entry,
+          guesses: [...entry.guesses, { pseudo, type }]
+        }
+      : entry
+  )
+);
+
+  // 4. Met à jour les types validés
   setValidatedTypes((prev) => {
     const types = prev[pseudo] || [];
     return {
@@ -405,6 +423,25 @@ socket.on("guessValidated", ({ pseudo, guess, type }) => {
           </li>
         ))}
       </ol>
+      <h3>Historique de la partie</h3>
+<ul>
+  {history.map((entry, idx) => (
+    <li key={idx} className="history-entry">
+      🎬 <strong>Vidéo {idx + 1}</strong><br />
+      {entry.guesses.length > 0 ? (
+        <ul>
+          {entry.guesses.map((g, i) => (
+            <li key={i}>
+              {g.pseudo} a trouvé : {g.type}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <em>Personne n’a deviné</em>
+      )}
+    </li>
+  ))}
+</ul>
     </div>
   );
 
