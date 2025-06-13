@@ -1,0 +1,95 @@
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background: linear-gradient(145deg, #2e2e2e, #121212);
+  color: #fff;
+  margin: 0;
+  padding: 0;
+}
+
+.App {
+  padding: 2rem;
+  text-align: center;
+}
+
+input[type="text"],
+input[type="range"] {
+  padding: 10px;
+  margin: 10px;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  width: 200px;
+}
+
+button {
+  padding: 10px 20px;
+  background-color: #3498db;
+  border: none;
+  color: white;
+  font-size: 1rem;
+  border-radius: 10px;
+  cursor: pointer;
+  margin: 5px;
+  transition: background 0.3s;
+}
+
+button:hover {
+  background-color: #2980b9;
+}
+
+.lobby, .admin, .player, .victory, .home {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 15px;
+  padding: 2rem;
+  max-width: 800px;
+  margin: 2rem auto;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+li {
+  padding: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+h1, h2, h3 {
+  margin: 1rem 0;
+}
+
+.countdown-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.countdown-number {
+  font-size: 10rem;
+  color: #fff;
+  animation: scaleup 1s ease-in-out infinite;
+}
+
+@keyframes scaleup {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+}
