@@ -26,6 +26,12 @@ export default function App() {
   const [volume, setVolume] = useState(50);
   const [isMuted, setMuted] = useState(true);
   const [progress, setProgress] = useState(0);
+  const [flashPlayer, setFlashPlayer] = useState(null);
+    const [theme, setTheme] = useState("dark");
+
+  const toggleTheme = () => {
+  setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+};
   const progressInterval = useRef(null);
 
   const playerRef = useRef(null);
@@ -34,6 +40,8 @@ export default function App() {
     const regex = /(?:\?v=|\/embed\/|\.be\/)([^&\n?#]+)/;
     const match = url.match(regex);
     return match ? match[1] : null;
+  
+
   };
 
   useEffect(() => {
@@ -97,25 +105,33 @@ if (progressInterval.current) clearInterval(progressInterval.current);
       setGuesses((prev) => [...prev, { pseudo, guess }]);
     });
 
-    socket.on("guessValidated", ({ pseudo, guess, type }) => {
-      setPlayers((prev) =>
-        prev.map((p) =>
-          p.pseudo === pseudo ? { ...p, score: p.score + 1 } : p
-        )
-      );
-      setEventLog((prev) => [
-        ...prev,
-        { type: "validated", pseudo, detail: `${type} : ${guess}` }
-      ]);
-      setValidatedTypes((prev) => {
-        const types = prev[pseudo] || [];
-        return {
-          ...prev,
-          [pseudo]: [...types, type]
-  };
-});
-    });
+socket.on("guessValidated", ({ pseudo, guess, type }) => {
+  // 1. Met à jour les scores
+  setPlayers((prev) =>
+    prev.map((p) =>
+      p.pseudo === pseudo ? { ...p, score: p.score + 1 } : p
+    )
+  );
 
+  // 2. Ajoute l'entrée au journal
+  setEventLog((prev) => [
+    ...prev,
+    { type: "validated", pseudo, detail: `${type} : ${guess}` },
+  ]);
+
+  // 3. Met à jour les types validés
+  setValidatedTypes((prev) => {
+    const types = prev[pseudo] || [];
+    return {
+      ...prev,
+      [pseudo]: [...types, type],
+    };
+  });
+
+  // 4. LANCE L’EFFET FLASH
+  setFlashPlayer(pseudo);
+  setTimeout(() => setFlashPlayer(null), 800);
+});
     socket.on("guessRejected", ({ pseudo, guess }) => {
       setEventLog((prev) => [
         ...prev,
@@ -287,7 +303,13 @@ if (progressInterval.current) clearInterval(progressInterval.current);
     .filter((p) => !p.admin) // ← on exclut l’admin
     .sort((a, b) => b.score - a.score)
     .map((p, idx) => (
-      <li key={p.pseudo} className={p.pseudo === pseudo ? "current-player" : ""}>
+      <li
+  key={p.pseudo}
+  className={`
+    ${p.pseudo === pseudo ? "current-player" : ""}
+    ${p.pseudo === flashPlayer ? "flash-guess" : ""}
+  `.trim()}
+>
         {idx === 0 ? "🥇 " : idx === 1 ? "🥈 " : idx === 2 ? "🥉 " : ""}
         {p.pseudo} — {p.score} pts
       </li>
@@ -357,7 +379,13 @@ if (progressInterval.current) clearInterval(progressInterval.current);
     .filter((p) => !p.admin) // ← on exclut l’admin
     .sort((a, b) => b.score - a.score)
     .map((p, idx) => (
-      <li key={p.pseudo} className={p.pseudo === pseudo ? "current-player" : ""}>
+      <li
+  key={p.pseudo}
+  className={`
+    ${p.pseudo === pseudo ? "current-player" : ""}
+    ${p.pseudo === flashPlayer ? "flash-guess" : ""}
+  `.trim()}
+>
         {idx === 0 ? "🥇 " : idx === 1 ? "🥈 " : idx === 2 ? "🥉 " : ""}
         {p.pseudo} — {p.score} pts
       </li>
@@ -405,12 +433,18 @@ if (progressInterval.current) clearInterval(progressInterval.current);
   );
 
   return (
-    <div className="App">
-      {view === "home" && renderHome()}
-      {view === "lobby" && renderLobby()}
-      {view === "admin" && renderAdmin()}
-      {view === "player" && renderPlayer()}
-      {view === "victory" && renderVictory()}
-    </div>
+<>
+  <button className="theme-toggle" onClick={toggleTheme}>
+    🎨 Thème : {theme === "dark" ? "Sombre" : "Clair"}
+  </button>
+
+  <div className={`App ${theme === "dark" ? "theme-dark" : "theme-light"}`}>
+    {view === "home" && renderHome()}
+    {view === "lobby" && renderLobby()}
+    {view === "admin" && renderAdmin()}
+    {view === "player" && renderPlayer()}
+    {view === "victory" && renderVictory()}
+  </div>
+</>
   );
 }

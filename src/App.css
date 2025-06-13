@@ -166,3 +166,75 @@ h1, h2, h3 {
   }
 }
 
+.theme-dark {
+  background: linear-gradient(145deg, #2e2e2e, #121212);
+  color: #fff;
+}
+
+.theme-light {
+  background: linear-gradient(145deg, #ffffff, #dddddd);
+  color: #111;
+}
+
+.theme-dark button {
+  background-color: #3498db;
+  color: white;
+}
+
+.theme-light button {
+  background-color: #2980b9;
+  color: white;
+}
+
+.theme-light .lobby,
+.theme-light .admin,
+.theme-light .player,
+.theme-light .victory,
+.theme-light .home {
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+}
+
+.theme-toggle {
+  position: fixed;
+  top: 15px;
+  right: 15px;
+  z-index: 9999;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  background: #444;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  opacity: 0.8;
+  transition: opacity 0.3s;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.theme-toggle:hover {
+  opacity: 1;
+  cursor: pointer;
+}
+
+.flash-guess {
+  animation: flashPulse 0.6s ease-in-out;
+  background-color: #2ecc71 !important;
+  color: #fff;
+}
+
+@keyframes flashPulse {
+  0% {
+    transform: scale(1);
+    background-color: #2ecc71;
+  }
+  50% {
+    transform: scale(1.05);
+    background-color: #27ae60;
+  }
+  100% {
+    transform: scale(1);
+    background-color: #2ecc71;
+  }
+}
+
+
