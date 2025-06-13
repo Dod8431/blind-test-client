@@ -28,6 +28,7 @@ export default function App() {
   const [isMuted, setMuted] = useState(true);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [scoreLimit, setScoreLimit] = useState(10); // 10 par défaut
   const [history, setHistory] = useState([]);
   const [systemMessage, setSystemMessage] = useState(null);
   const inputRef = useRef(null);
@@ -202,7 +203,7 @@ const handleJoinRoom = () => {
 };
 
   const handleStart = () => {
-    socket.emit("startGame", { roomCode });
+    socket.emit("startGame", { roomCode, scoreLimit });
   };
 
 const handleLaunchVideo = () => {
@@ -288,7 +289,22 @@ const handleLaunchVideo = () => {
     </div>
   ))}
 </div>
-      {isAdmin && <button onClick={handleStart}>Lancer la partie</button>}
+      {isAdmin && (
+  <>
+    <div style={{ marginBottom: "1rem" }}>
+      <label>Limite de score : </label>
+      <input
+        type="number"
+        value={scoreLimit}
+        min={1}
+        onChange={(e) => setScoreLimit(Number(e.target.value))}
+        style={{ width: "60px", marginLeft: "0.5rem" }}
+      />
+    </div>
+    <button onClick={handleStart}>Lancer la partie</button>
+  </>
+)}
+
     </div>
   );
 
