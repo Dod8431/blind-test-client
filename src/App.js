@@ -25,6 +25,8 @@ export default function App() {
   const [winners, setWinners] = useState([]);
   const [volume, setVolume] = useState(50);
   const [isMuted, setMuted] = useState(true);
+  const [progress, setProgress] = useState(0);
+  const progressInterval = useRef(null);
 
   const playerRef = useRef(null);
 
@@ -61,6 +63,18 @@ export default function App() {
         setValidatedTypes({});
         setVideoRevealed(false);
         setCountdownActive(false);
+        setProgress(0);
+if (progressInterval.current) clearInterval(progressInterval.current);
+
+progressInterval.current = setInterval(() => {
+  setProgress((prev) => {
+    if (prev >= 100) {
+      clearInterval(progressInterval.current);
+      return 100;
+    }
+    return prev + 0.5; // ← ajuste pour la vitesse
+  });
+}, 300); // ← 0.5% toutes les 300ms ≈ 60s
       }, 3000);
     });
 
@@ -69,10 +83,14 @@ export default function App() {
       setVideoRevealed(false);
       setGuesses([]);
       setEventLog([]);
+      setProgress(0);
+if (progressInterval.current) clearInterval(progressInterval.current);
     });
 
     socket.on("revealVideo", (videoId) => {
       setVideoRevealed(true);
+      setProgress(0);
+if (progressInterval.current) clearInterval(progressInterval.current);
     });
 
     socket.on("guessReceived", ({ pseudo, guess }) => {
@@ -215,6 +233,11 @@ export default function App() {
       <button onClick={handleForceReveal}>🎬 Reveal</button>
       {countdownActive && <Countdown />}
       {currentVideoId && (
+  <div className="progress-bar-container">
+    <div className="progress-bar" style={{ width: `${progress}%` }} />
+  </div>
+)}
+      {currentVideoId && (
         <YouTube
           videoId={currentVideoId}
           opts={{ height: "360", width: "640", playerVars: { autoplay: 1 } }}
@@ -278,6 +301,11 @@ export default function App() {
     <div className="player">
       <h2>Joueur</h2>
       {countdownActive && <Countdown />}
+      {currentVideoId && (
+  <div className="progress-bar-container">
+    <div className="progress-bar" style={{ width: `${progress}%` }} />
+  </div>
+)}
       {currentVideoId && (
         <YouTube
           videoId={currentVideoId}
