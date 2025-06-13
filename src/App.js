@@ -261,6 +261,7 @@ export default function App() {
       <h3>Classement</h3>
 <ol>
   {[...players]
+    .filter((p) => !p.admin) // ← on exclut l’admin
     .sort((a, b) => b.score - a.score)
     .map((p, idx) => (
       <li key={p.pseudo}>
@@ -325,6 +326,7 @@ export default function App() {
       <h3>Classement</h3>
 <ol>
   {[...players]
+    .filter((p) => !p.admin) // ← on exclut l’admin
     .sort((a, b) => b.score - a.score)
     .map((p, idx) => (
       <li key={p.pseudo}>
