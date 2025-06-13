@@ -248,7 +248,14 @@ socket.on("guessValidated", ({ pseudo, guess, type }) => {
     <div className="lobby">
       <h2>Lobby - Code : {roomCode}</h2>
       <p>Admin : {players.find((p) => p.admin)?.pseudo}</p>
-      <ul>{players.map((p) => <li key={p.pseudo}>{p.pseudo}</li>)}</ul>
+      <div className="lobby-player-list">
+  {players.map((p) => (
+    <div className="lobby-player-tile" key={p.pseudo}>
+      {p.pseudo}
+      {p.admin && " 👑"}
+    </div>
+  ))}
+</div>
       {isAdmin && <button onClick={handleStart}>Lancer la partie</button>}
     </div>
   );
