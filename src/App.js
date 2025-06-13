@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import io from "socket.io-client";
 import YouTube from "react-youtube";
 import Countdown from "./Countdown";
+import confetti from "canvas-confetti";
 import "./App.css";
 
 const socket = io("https://blind-test-server-vvgh.onrender.com");
@@ -25,6 +26,15 @@ export default function App() {
   const [winners, setWinners] = useState([]);
   const [volume, setVolume] = useState(50);
   const [isMuted, setMuted] = useState(true);
+  const [progress, setProgress] = useState(0);
+  const [history, setHistory] = useState([]);
+  const [flashPlayer, setFlashPlayer] = useState(null);
+    const [theme, setTheme] = useState("dark");
+
+  const toggleTheme = () => {
+  setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+};
+  const progressInterval = useRef(null);
 
   const playerRef = useRef(null);
 
@@ -32,6 +42,8 @@ export default function App() {
     const regex = /(?:\?v=|\/embed\/|\.be\/)([^&\n?#]+)/;
     const match = url.match(regex);
     return match ? match[1] : null;
+  
+
   };
 
   useEffect(() => {
@@ -58,9 +70,25 @@ export default function App() {
       setCountdownActive(true);
       setTimeout(() => {
         setCurrentVideoId(videoId);
+        setHistory((prev) => [
+  ...prev,
+  { videoId, guesses: [] }
+]);
         setValidatedTypes({});
         setVideoRevealed(false);
         setCountdownActive(false);
+        setProgress(0);
+if (progressInterval.current) clearInterval(progressInterval.current);
+
+progressInterval.current = setInterval(() => {
+  setProgress((prev) => {
+    if (prev >= 100) {
+      clearInterval(progressInterval.current);
+      return 100;
+    }
+    return prev + 0.5; // ← ajuste pour la vitesse
+  });
+}, 300); // ← 0.5% toutes les 300ms ≈ 60s
       }, 3000);
     });
 
@@ -69,35 +97,60 @@ export default function App() {
       setVideoRevealed(false);
       setGuesses([]);
       setEventLog([]);
+      
+      setProgress(0);
+if (progressInterval.current) clearInterval(progressInterval.current);
     });
 
     socket.on("revealVideo", (videoId) => {
       setVideoRevealed(true);
+      setProgress(0);
+if (progressInterval.current) clearInterval(progressInterval.current);
     });
 
     socket.on("guessReceived", ({ pseudo, guess }) => {
       setGuesses((prev) => [...prev, { pseudo, guess }]);
     });
 
-    socket.on("guessValidated", ({ pseudo, guess, type }) => {
-      setPlayers((prev) =>
-        prev.map((p) =>
-          p.pseudo === pseudo ? { ...p, score: p.score + 1 } : p
-        )
-      );
-      setEventLog((prev) => [
-        ...prev,
-        { type: "validated", pseudo, detail: `${type} : ${guess}` }
-      ]);
-      setValidatedTypes((prev) => {
-        const types = prev[pseudo] || [];
-        return {
-          ...prev,
-          [pseudo]: [...types, type]
-  };
-});
-    });
+socket.on("guessValidated", ({ pseudo, guess, type }) => {
+  // 1. Met à jour les scores
+  setPlayers((prev) =>
+    prev.map((p) =>
+      p.pseudo === pseudo ? { ...p, score: p.score + 1 } : p
+    )
+  );
 
+  // 2. Ajoute l'entrée au journal
+  setEventLog((prev) => [
+    ...prev,
+    { type: "validated", pseudo, detail: `${type} : ${guess}` },
+  ]);
+
+  // 3. Met à jour l'historique
+  setHistory((prev) =>
+  prev.map((entry, i) =>
+    i === prev.length - 1
+      ? {
+          ...entry,
+          guesses: [...entry.guesses, { pseudo, type }]
+        }
+      : entry
+  )
+);
+
+  // 4. Met à jour les types validés
+  setValidatedTypes((prev) => {
+    const types = prev[pseudo] || [];
+    return {
+      ...prev,
+      [pseudo]: [...types, type],
+    };
+  });
+
+  // 4. LANCE L’EFFET FLASH
+  setFlashPlayer(pseudo);
+  setTimeout(() => setFlashPlayer(null), 800);
+});
     socket.on("guessRejected", ({ pseudo, guess }) => {
       setEventLog((prev) => [
         ...prev,
@@ -107,6 +160,11 @@ export default function App() {
 
     socket.on("endGame", ({ winners }) => {
       setWinners(winners);
+      confetti({
+  particleCount: 150,
+  spread: 70,
+  origin: { y: 0.6 }
+});
       setView("victory");
     });
 
@@ -196,7 +254,14 @@ export default function App() {
     <div className="lobby">
       <h2>Lobby - Code : {roomCode}</h2>
       <p>Admin : {players.find((p) => p.admin)?.pseudo}</p>
-      <ul>{players.map((p) => <li key={p.pseudo}>{p.pseudo}</li>)}</ul>
+      <div className="lobby-player-list">
+  {players.map((p) => (
+    <div className="lobby-player-tile" key={p.pseudo}>
+      {p.pseudo}
+      {p.admin && " 👑"}
+    </div>
+  ))}
+</div>
       {isAdmin && <button onClick={handleStart}>Lancer la partie</button>}
     </div>
   );
@@ -214,6 +279,11 @@ export default function App() {
       <button onClick={handleSkipVideo}>⏭️ Skip</button>
       <button onClick={handleForceReveal}>🎬 Reveal</button>
       {countdownActive && <Countdown />}
+      {currentVideoId && (
+  <div className="progress-bar-container">
+    <div className="progress-bar" style={{ width: `${progress}%` }} />
+  </div>
+)}
       {currentVideoId && (
         <YouTube
           videoId={currentVideoId}
@@ -259,12 +329,18 @@ export default function App() {
         ))}
       </ul>
       <h3>Classement</h3>
-<ol>
+<ol className="score-animated">
   {[...players]
     .filter((p) => !p.admin) // ← on exclut l’admin
     .sort((a, b) => b.score - a.score)
     .map((p, idx) => (
-      <li key={p.pseudo}>
+      <li
+  key={p.pseudo}
+  className={`
+    ${p.pseudo === pseudo ? "current-player" : ""}
+    ${p.pseudo === flashPlayer ? "flash-guess" : ""}
+  `.trim()}
+>
         {idx === 0 ? "🥇 " : idx === 1 ? "🥈 " : idx === 2 ? "🥉 " : ""}
         {p.pseudo} — {p.score} pts
       </li>
@@ -278,6 +354,11 @@ export default function App() {
     <div className="player">
       <h2>Joueur</h2>
       {countdownActive && <Countdown />}
+      {currentVideoId && (
+  <div className="progress-bar-container">
+    <div className="progress-bar" style={{ width: `${progress}%` }} />
+  </div>
+)}
       {currentVideoId && (
         <YouTube
           videoId={currentVideoId}
@@ -324,12 +405,18 @@ export default function App() {
         ))}
       </ul>
       <h3>Classement</h3>
-<ol>
+<ol className="score-animated">
   {[...players]
     .filter((p) => !p.admin) // ← on exclut l’admin
     .sort((a, b) => b.score - a.score)
     .map((p, idx) => (
-      <li key={p.pseudo}>
+      <li
+  key={p.pseudo}
+  className={`
+    ${p.pseudo === pseudo ? "current-player" : ""}
+    ${p.pseudo === flashPlayer ? "flash-guess" : ""}
+  `.trim()}
+>
         {idx === 0 ? "🥇 " : idx === 1 ? "🥈 " : idx === 2 ? "🥉 " : ""}
         {p.pseudo} — {p.score} pts
       </li>
@@ -349,6 +436,25 @@ export default function App() {
           </li>
         ))}
       </ol>
+      <h3>Historique de la partie</h3>
+<ul>
+  {history.map((entry, idx) => (
+    <li key={idx} className="history-entry">
+      🎬 <strong>Vidéo {idx + 1}</strong><br />
+      {entry.guesses.length > 0 ? (
+        <ul>
+          {entry.guesses.map((g, i) => (
+            <li key={i}>
+              {g.pseudo} a trouvé : {g.type}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <em>Personne n’a deviné</em>
+      )}
+    </li>
+  ))}
+</ul>
     </div>
   );
 
@@ -377,12 +483,18 @@ export default function App() {
   );
 
   return (
-    <div className="App">
-      {view === "home" && renderHome()}
-      {view === "lobby" && renderLobby()}
-      {view === "admin" && renderAdmin()}
-      {view === "player" && renderPlayer()}
-      {view === "victory" && renderVictory()}
-    </div>
+<>
+  <button className="theme-toggle" onClick={toggleTheme}>
+    🎨 Thème : {theme === "dark" ? "Sombre" : "Clair"}
+  </button>
+
+  <div className={`App ${theme === "dark" ? "theme-dark" : "theme-light"}`}>
+    {view === "home" && renderHome()}
+    {view === "lobby" && renderLobby()}
+    {view === "admin" && renderAdmin()}
+    {view === "player" && renderPlayer()}
+    {view === "victory" && renderVictory()}
+  </div>
+</>
   );
 }
