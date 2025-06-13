@@ -278,7 +278,6 @@ const handleLaunchVideo = () => {
 
   const renderAdmin = () => (
     <div className="admin">
-      <h2>Admin</h2>
       <input
         type="text"
         placeholder="Lien YouTube"
@@ -365,7 +364,6 @@ const handleLaunchVideo = () => {
 
   const renderPlayer = () => (
     <div className="player">
-      <h2>Joueur</h2>
       {countdownActive && <Countdown />}
       {currentVideoId && (
   <div className="progress-bar-container">
@@ -507,6 +505,12 @@ const handleLaunchVideo = () => {
   <button className="theme-toggle" onClick={toggleTheme}>
     🎨 Thème : {theme === "dark" ? "Sombre" : "Clair"}
   </button>
+
+  {view !== "home" && (
+  <div className="role-banner">
+    Rôle : {isAdmin ? "Admin 👑" : "Joueur 🎧"}
+  </div>
+)}
 
   <div className={`App ${theme === "dark" ? "theme-dark" : "theme-light"}`}>
     {view === "home" && renderHome()}
