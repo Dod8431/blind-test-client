@@ -26,14 +26,24 @@ export default function App() {
   const [winners, setWinners] = useState([]);
   const [volume, setVolume] = useState(50);
   const [isMuted, setMuted] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [scoreLimit, setScoreLimit] = useState(10); // 10 par défaut
   const [history, setHistory] = useState([]);
+  const [systemMessage, setSystemMessage] = useState(null);
+  const inputRef = useRef(null);
   const [flashPlayer, setFlashPlayer] = useState(null);
     const [theme, setTheme] = useState("dark");
 
   const toggleTheme = () => {
   setTheme((prev) => (prev === "dark" ? "light" : "dark"));
 };
+
+const showSystemMessage = (msg, duration = 3000) => {
+  setSystemMessage(msg);
+  setTimeout(() => setSystemMessage(null), duration);
+};
+
   const progressInterval = useRef(null);
 
   const playerRef = useRef(null);
@@ -48,12 +58,14 @@ export default function App() {
 
   useEffect(() => {
     socket.on("roomCreated", ({ roomCode }) => {
+      setLoading(false);
       setRoomCode(roomCode);
       setIsAdmin(true);
       setView("lobby");
     });
 
     socket.on("roomJoined", ({ roomCode }) => {
+      setLoading(false);
       setRoomCode(roomCode);
       setView("lobby");
     });
@@ -77,6 +89,11 @@ export default function App() {
         setValidatedTypes({});
         setVideoRevealed(false);
         setCountdownActive(false);
+setTimeout(() => {
+  if (inputRef.current) {
+    inputRef.current.focus();
+  }
+}, 500); // petit délai post-countdown
         setProgress(0);
 if (progressInterval.current) clearInterval(progressInterval.current);
 
@@ -171,38 +188,48 @@ socket.on("guessValidated", ({ pseudo, guess, type }) => {
     return () => socket.removeAllListeners();
   }, [isAdmin]);
 
-  const handleCreateRoom = () => {
-    if (pseudo.trim()) socket.emit("createRoom", { pseudo });
-  };
+const handleCreateRoom = () => {
+  if (pseudo.trim()) {
+    setLoading(true);
+    socket.emit("createRoom", { pseudo });
+  }
+};
 
-  const handleJoinRoom = () => {
-    if (pseudo.trim() && joinCode.trim())
-      socket.emit("joinRoom", { pseudo, roomCode: joinCode.toUpperCase() });
-  };
+const handleJoinRoom = () => {
+  if (pseudo.trim() && joinCode.trim()) {
+    setLoading(true);
+    socket.emit("joinRoom", { pseudo, roomCode: joinCode.toUpperCase() });
+  }
+};
 
   const handleStart = () => {
-    socket.emit("startGame", { roomCode });
+    socket.emit("startGame", { roomCode, scoreLimit });
   };
 
-  const handleLaunchVideo = () => {
-    const videoId = extractVideoId(inputLink);
-    if (videoId) {
-      setCurrentVideoId(videoId);
-      setVideoRevealed(false);
-      setGuesses([]);
-      setEventLog([]);
-      socket.emit("playVideo", { roomCode, videoId });
-      setInputLink("");
-    }
-  };
+const handleLaunchVideo = () => {
+  const videoId = extractVideoId(inputLink);
+  if (videoId) {
+    setLoading(true);
+    setCurrentVideoId(videoId);
+    setVideoRevealed(false);
+    setGuesses([]);
+    setEventLog([]);
+    socket.emit("playVideo", { roomCode, videoId });
+    showSystemMessage("🎵 Nouvelle vidéo lancée !");
+    setInputLink("");
+    setTimeout(() => setLoading(false), 1000); // auto-reset après un petit délai
+  }
+};
 
   const handleForceReveal = () => {
     socket.emit("forceReveal", { roomCode });
+    showSystemMessage("🎬 Vidéo révélée !");
     setVideoRevealed(true);
   };
 
   const handleSkipVideo = () => {
       socket.emit("skipVideo", { roomCode });
+      showSystemMessage("⏭️ Chanson passée !");
   };
 
   const handleGuessSubmit = (e) => {
@@ -262,22 +289,51 @@ socket.on("guessValidated", ({ pseudo, guess, type }) => {
     </div>
   ))}
 </div>
-      {isAdmin && <button onClick={handleStart}>Lancer la partie</button>}
+      {isAdmin && (
+  <>
+    <div style={{ marginBottom: "1rem" }}>
+      <label>Limite de score : </label>
+      <input
+        type="number"
+        value={scoreLimit}
+        min={1}
+        onChange={(e) => setScoreLimit(Number(e.target.value))}
+        style={{ width: "60px", marginLeft: "0.5rem" }}
+      />
+    </div>
+    <button onClick={handleStart}>Lancer la partie</button>
+  </>
+)}
+
     </div>
   );
 
   const renderAdmin = () => (
     <div className="admin">
-      <h2>Admin</h2>
       <input
         type="text"
         placeholder="Lien YouTube"
         value={inputLink}
         onChange={(e) => setInputLink(e.target.value)}
       />
-      <button onClick={handleLaunchVideo}>Lancer</button>
-      <button onClick={handleSkipVideo}>⏭️ Skip</button>
-      <button onClick={handleForceReveal}>🎬 Reveal</button>
+<div className="admin-controls">
+  <button
+    onClick={handleLaunchVideo}
+    className="admin-button btn-launch"
+    disabled={loading}
+  >
+    ▶️ Lancer
+    {loading && <span className="spinner" />}
+  </button>
+
+  <button onClick={handleForceReveal} className="admin-button btn-reveal">
+    🎬 Reveal
+  </button>
+
+  <button onClick={handleSkipVideo} className="admin-button btn-skip">
+    ⏭️ Skip
+  </button>
+</div>
       {countdownActive && <Countdown />}
       {currentVideoId && (
   <div className="progress-bar-container">
@@ -352,7 +408,6 @@ socket.on("guessValidated", ({ pseudo, guess, type }) => {
 
   const renderPlayer = () => (
     <div className="player">
-      <h2>Joueur</h2>
       {countdownActive && <Countdown />}
       {currentVideoId && (
   <div className="progress-bar-container">
@@ -386,24 +441,22 @@ socket.on("guessValidated", ({ pseudo, guess, type }) => {
         />
         <button onClick={toggleMute}>{isMuted ? "🔇" : "🔊"}</button>
       </div>
-      <input
-        type="text"
-        placeholder="Votre réponse"
-        value={guessInput}
-        onChange={(e) => setGuessInput(e.target.value)}
-        onKeyDown={handleGuessSubmit}
-      />
+<input
+  ref={inputRef}
+  type="text"
+  placeholder="Votre réponse"
+  value={guessInput}
+  onChange={(e) => setGuessInput(e.target.value)}
+  onKeyDown={handleGuessSubmit}
+/>
       <h3>Historique</h3>
-      <ul>
-        {eventLog.map((e, idx) => (
-          <li
-            key={idx}
-            style={{ color: e.type === "rejected" ? "red" : "green" }}
-          >
-            {e.pseudo} : {e.detail}
-          </li>
-        ))}
-      </ul>
+<ul className="event-log">
+  {eventLog.map((e, idx) => (
+    <li key={idx} className={e.type}>
+      <strong>{e.pseudo}</strong> : {e.detail}
+    </li>
+  ))}
+</ul>
       <h3>Classement</h3>
 <ol className="score-animated">
   {[...players]
@@ -468,7 +521,10 @@ socket.on("guessValidated", ({ pseudo, guess, type }) => {
         onChange={(e) => setPseudo(e.target.value)}
       />
       <div>
-        <button onClick={handleCreateRoom}>Créer une partie</button>
+        <button onClick={handleCreateRoom} disabled={loading}>
+  Créer une partie
+  {loading && <span className="spinner" />}
+</button>
       </div>
       <div>
         <input
@@ -477,7 +533,11 @@ socket.on("guessValidated", ({ pseudo, guess, type }) => {
           value={joinCode}
           onChange={(e) => setJoinCode(e.target.value)}
         />
-        <button onClick={handleJoinRoom}>Rejoindre</button>
+        <button onClick={handleJoinRoom} disabled={loading}>
+  Rejoindre
+  {loading && <span className="spinner" />}
+</button>
+
       </div>
     </div>
   );
@@ -487,6 +547,17 @@ socket.on("guessValidated", ({ pseudo, guess, type }) => {
   <button className="theme-toggle" onClick={toggleTheme}>
     🎨 Thème : {theme === "dark" ? "Sombre" : "Clair"}
   </button>
+    {systemMessage && (
+    <div className="system-banner">{systemMessage}</div>
+  )}
+
+  {view !== "home" && (
+  <div className="role-banner">
+    Rôle : {isAdmin ? "Admin 👑" : "Joueur 🎧"}
+  </div>
+
+  
+)}
 
   <div className={`App ${theme === "dark" ? "theme-dark" : "theme-light"}`}>
     {view === "home" && renderHome()}

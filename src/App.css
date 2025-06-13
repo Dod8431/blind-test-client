@@ -282,5 +282,162 @@ h1, h2, h3 {
   }
 }
 
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 
+.spinner {
+  border: 4px solid rgba(255, 255, 255, 0.2);
+  border-top: 4px solid white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 0.6s linear infinite;
+  display: inline-block;
+  margin-left: 10px;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.role-banner {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  background: rgba(52, 152, 219, 0.85);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  z-index: 9998;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.admin-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem auto;
+  max-width: 600px;
+}
+
+.admin-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  padding: 10px;
+  border: none;
+  border-radius: 10px;
+  color: white;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.btn-launch {
+  background-color: #27ae60;
+}
+
+.btn-reveal {
+  background-color: #f39c12;
+}
+
+.btn-skip {
+  background-color: #c0392b;
+}
+
+.admin-button:hover {
+  opacity: 0.9;
+}
+
+.system-banner {
+  position: fixed;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.2);
+  padding: 10px 20px;
+  color: white;
+  font-size: 1rem;
+  font-weight: bold;
+  border-radius: 8px;
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  animation: fadeInOut 3s ease forwards;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+  10% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  90% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+}
+
+.event-log {
+  margin-top: 1rem;
+  padding-left: 0;
+  list-style: none;
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 1rem;
+}
+
+.event-log li {
+  margin-bottom: 0.5rem;
+  padding: 0.3rem 0.5rem;
+  border-left: 4px solid transparent;
+  transition: background 0.2s;
+}
+
+.event-log li.validated {
+  background-color: rgba(39, 174, 96, 0.1);
+  border-left-color: #2ecc71;
+}
+
+.event-log li.rejected {
+  background-color: rgba(192, 57, 43, 0.1);
+  border-left-color: #e74c3c;
+}
+
+.event-log strong {
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.event-log {
+  list-style: none;
+  padding: 0;
+  margin-top: 1rem;
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 1rem;
+}
+
+.event-log li {
+  margin-bottom: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  border-left: 4px solid transparent;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.event-log li.validated {
+  background-color: rgba(39, 174, 96, 0.1);
+  border-left-color: #2ecc71;
+}
+
+.event-log li.rejected {
+  background-color: rgba(192, 57, 43, 0.1);
+  border-left-color: #e74c3c;
+}
+
+.event-log strong {
+  font-weight: 600;
+  color: #ffffff;
+}
 
