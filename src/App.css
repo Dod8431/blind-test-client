@@ -106,3 +106,10 @@ h1, h2, h3 {
     transform: translateY(0);
   }
 }
+
+.current-player {
+  background-color: #1abc9c55;
+  border-left: 5px solid #1abc9c;
+  border-radius: 8px;
+  padding-left: 10px;
+}

@@ -264,7 +264,7 @@ export default function App() {
     .filter((p) => !p.admin) // ← on exclut l’admin
     .sort((a, b) => b.score - a.score)
     .map((p, idx) => (
-      <li key={p.pseudo}>
+      <li key={p.pseudo} className={p.pseudo === pseudo ? "current-player" : ""}>
         {idx === 0 ? "🥇 " : idx === 1 ? "🥈 " : idx === 2 ? "🥉 " : ""}
         {p.pseudo} — {p.score} pts
       </li>
@@ -329,7 +329,7 @@ export default function App() {
     .filter((p) => !p.admin) // ← on exclut l’admin
     .sort((a, b) => b.score - a.score)
     .map((p, idx) => (
-      <li key={p.pseudo}>
+      <li key={p.pseudo} className={p.pseudo === pseudo ? "current-player" : ""}>
         {idx === 0 ? "🥇 " : idx === 1 ? "🥈 " : idx === 2 ? "🥉 " : ""}
         {p.pseudo} — {p.score} pts
       </li>
