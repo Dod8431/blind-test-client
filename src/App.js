@@ -31,7 +31,10 @@ export default function App() {
   const [scoreLimit, setScoreLimit] = useState(10); // 10 par défaut
   const [history, setHistory] = useState([]);
   const [systemMessage, setSystemMessage] = useState(null);
+  const [searchLoading, setSearchLoading] = useState(false);
   const inputRef = useRef(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState([]); // tableau {videoId, title}
   const [flashPlayer, setFlashPlayer] = useState(null);
     const [theme, setTheme] = useState("dark");
 
@@ -48,13 +51,15 @@ const showSystemMessage = (msg, duration = 3000) => {
 
   const playerRef = useRef(null);
 
-  const extractVideoId = (url) => {
-    const regex = /(?:\?v=|\/embed\/|\.be\/)([^&\n?#]+)/;
-    const match = url.match(regex);
-    return match ? match[1] : null;
-  
+const extractVideoId = (urlOrId) => {
+  if (!urlOrId) return null;
+  // 1) Si c’est déjà un ID de 11 caractères
+  if (/^[A-Za-z0-9_-]{11}$/.test(urlOrId)) return urlOrId;
+  // 2) Sinon on essaie d’extraire depuis une URL
+  const m = urlOrId.match(/(?:v=|\/embed\/|\.be\/)([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : null;
+};
 
-  };
 
   useEffect(() => {
     socket.on("roomCreated", ({ roomCode }) => {
@@ -119,11 +124,13 @@ progressInterval.current = setInterval(() => {
 if (progressInterval.current) clearInterval(progressInterval.current);
     });
 
-    socket.on("revealVideo", (videoId) => {
-      setVideoRevealed(true);
-      setProgress(0);
-if (progressInterval.current) clearInterval(progressInterval.current);
-    });
+socket.on("revealVideo", (videoId) => {
+  setVideoRevealed(true);
+  setGuessInput("");             // ← on vide le champ
+  setProgress(0);
+  if (progressInterval.current) clearInterval(progressInterval.current);
+});
+
 
     socket.on("guessReceived", ({ pseudo, guess }) => {
       setGuesses((prev) => [...prev, { pseudo, guess }]);
@@ -174,6 +181,14 @@ socket.on("guessValidated", ({ pseudo, guess, type }) => {
         { type: "rejected", pseudo, detail: guess }
       ]);
     });
+    
+    socket.on("guessClose", ({ pseudo, guess }) => {
+      console.log("🟡 Pas loin reçu :", pseudo, guess);
+  setEventLog((prev) => [
+    ...prev,
+    { type: "close", pseudo, detail: guess }
+  ]);
+});
 
     socket.on("endGame", ({ winners }) => {
       setWinners(winners);
@@ -206,20 +221,20 @@ const handleJoinRoom = () => {
     socket.emit("startGame", { roomCode, scoreLimit });
   };
 
-const handleLaunchVideo = () => {
-  const videoId = extractVideoId(inputLink);
-  if (videoId) {
-    setLoading(true);
-    setCurrentVideoId(videoId);
-    setVideoRevealed(false);
-    setGuesses([]);
-    setEventLog([]);
-    socket.emit("playVideo", { roomCode, videoId });
-    showSystemMessage("🎵 Nouvelle vidéo lancée !");
-    setInputLink("");
-    setTimeout(() => setLoading(false), 1000); // auto-reset après un petit délai
+const handleLaunchVideo = (videoIdParam) => {
+  // Priorité au paramètre (clic sur résultat), sinon extrait du champ
+  const videoId = videoIdParam || extractVideoId(inputLink);
+  if (!videoId) {
+    showSystemMessage("❌ Vidéo invalide : colle un lien YouTube complet ou choisis un résultat", 3000);
+    return;
   }
+  setLoading(true);
+  socket.emit("playVideo", { roomCode, videoId });
+  setInputLink("");
+  showSystemMessage("🎵 Nouvelle vidéo lancée !");
+  setTimeout(() => setLoading(false), 1000);
 };
+
 
   const handleForceReveal = () => {
     socket.emit("forceReveal", { roomCode });
@@ -256,6 +271,20 @@ const handleLaunchVideo = () => {
       prev.filter((g) => !(g.pseudo === pseudo && g.guess === guess))
     );
   };
+  
+const handleCloseGuess = (guess, pseudo) => {
+  socket.emit("guessClose", { roomCode, pseudo, guess });
+
+  setGuesses((prev) =>
+    prev.filter((g) => !(g.pseudo === pseudo && g.guess === guess))
+  );
+
+  setEventLog((prev) => [
+    ...prev,
+    { type: "close", pseudo, detail: guess }
+  ]);
+};
+
 
   const handleVolumeChange = (e) => {
     const newVolume = parseInt(e.target.value, 10);
@@ -277,6 +306,23 @@ const handleLaunchVideo = () => {
     }
   };
 
+const handleSearch = async () => {
+  if (!searchTerm.trim()) return;
+  setSearchLoading(true);
+  try {
+    const res = await fetch(
+      `https://blind-test-server-vvgh.onrender.com/search?q=${encodeURIComponent(searchTerm)}`
+    );
+    const data = await res.json();
+    setSearchResults(data);
+  } catch (err) {
+    console.error("Recherche client échouée", err);
+  } finally {
+    setSearchLoading(false);
+  }
+};
+
+
   const renderLobby = () => (
     <div className="lobby">
       <h2>Lobby - Code : {roomCode}</h2>
@@ -288,6 +334,7 @@ const handleLaunchVideo = () => {
       {p.admin && " 👑"}
     </div>
   ))}
+  
 </div>
       {isAdmin && (
   <>
@@ -308,103 +355,184 @@ const handleLaunchVideo = () => {
     </div>
   );
 
-  const renderAdmin = () => (
-    <div className="admin">
+const renderAdmin = () => (
+  <div className="admin">
+    {/* ─── Barre Recherche + Lien ─────────────────────────── */}
+    <div className="admin-search">
+      {/* Recherche par mot-clé */}
       <input
         type="text"
-        placeholder="Lien YouTube"
+        placeholder="Rechercher une chanson"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
+      <button
+        onClick={handleSearch}
+        disabled={searchLoading}
+        className="admin-button btn-launch"
+      >
+        {searchLoading ? <span className="spinner" /> : "🔍"}
+      </button>
+
+      {/* Coller un lien YouTube */}
+      <input
+        type="text"
+        placeholder="Ou coller un lien YouTube"
         value={inputLink}
         onChange={(e) => setInputLink(e.target.value)}
       />
-<div className="admin-controls">
-  <button
-    onClick={handleLaunchVideo}
-    className="admin-button btn-launch"
-    disabled={loading}
-  >
-    ▶️ Lancer
-    {loading && <span className="spinner" />}
-  </button>
+      <button
+        onClick={() => handleLaunchVideo()}
+        disabled={loading}
+        className="admin-button btn-launch"
+      >
+        {loading ? <span className="spinner" /> : "▶️"}
+      </button>
+    </div>
 
-  <button onClick={handleForceReveal} className="admin-button btn-reveal">
-    🎬 Reveal
-  </button>
-
-  <button onClick={handleSkipVideo} className="admin-button btn-skip">
-    ⏭️ Skip
-  </button>
-</div>
-      {countdownActive && <Countdown />}
-      {currentVideoId && (
-  <div className="progress-bar-container">
-    <div className="progress-bar" style={{ width: `${progress}%` }} />
-  </div>
-)}
-      {currentVideoId && (
-        <YouTube
-          videoId={currentVideoId}
-          opts={{ height: "360", width: "640", playerVars: { autoplay: 1 } }}
-          onReady={(e) => {
-            playerRef.current = e.target;
-            e.target.setVolume(volume);
-            if (isMuted) e.target.mute();
-            else e.target.unMute();
-          }}
-        />
-      )}
-      <div>
-        <input
-          type="range"
-          min="0"
-          max="100"
-          value={volume}
-          onChange={handleVolumeChange}
-        />
-        <button onClick={toggleMute}>{isMuted ? "🔇" : "🔊"}</button>
-      </div>
-      <h3>Progression sur la chanson : {Object.values(validatedTypes).flat().length} / 2</h3>
-      <h3>Réponses à valider</h3>
-      <ul>
-        {guesses.map(({ pseudo, guess }, idx) => (
-          <li key={idx}>
-            {pseudo} : {guess}
-            <button
-  onClick={() => handleValidate(guess, pseudo, "artiste")}
-  disabled={validatedTypes[pseudo]?.includes("artiste")}
->
-  ✅ Artiste
-</button>
-<button
-  onClick={() => handleValidate(guess, pseudo, "titre")}
-  disabled={validatedTypes[pseudo]?.includes("titre")}
->
-  ✅ Titre
-</button>
-            <button onClick={() => handleReject(guess, pseudo)}>❌</button>
+    {/* ─── Résultats de Recherche ─────────────────────────── */}
+    {searchResults.length > 0 && (
+      <ul className="search-results">
+        {searchResults.map(({ videoId, title, thumbnail }) => (
+          <li
+            key={videoId}
+            onClick={() => handleLaunchVideo(videoId)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              cursor: "pointer",
+              padding: "0.5rem 0"
+            }}
+          >
+            <img
+              src={thumbnail}
+              alt={title}
+              width={80}
+              style={{ marginRight: "0.5rem", borderRadius: "4px" }}
+            />
+            <span style={{ flex: 1, textAlign: "left" }}>{title}</span>
           </li>
         ))}
       </ul>
-      <h3>Classement</h3>
-<ol className="score-animated">
-  {[...players]
-    .filter((p) => !p.admin) // ← on exclut l’admin
-    .sort((a, b) => b.score - a.score)
-    .map((p, idx) => (
-      <li
-  key={p.pseudo}
-  className={`
-    ${p.pseudo === pseudo ? "current-player" : ""}
-    ${p.pseudo === flashPlayer ? "flash-guess" : ""}
-  `.trim()}
->
-        {idx === 0 ? "🥇 " : idx === 1 ? "🥈 " : idx === 2 ? "🥉 " : ""}
-        {p.pseudo} — {p.score} pts
-      </li>
-    ))}
-</ol>
+    )}
 
+    {/* ─── Contrôles Admin ─────────────────────────────────── */}
+    <div className="admin-controls">
+      <button
+        onClick={handleForceReveal}
+        className="admin-button btn-reveal"
+      >
+        🎬 Reveal
+      </button>
+      <button onClick={handleSkipVideo} className="admin-button btn-skip">
+        ⏭️ Skip
+      </button>
     </div>
-  );
+
+    {/* ─── Compte à rebours ───────────────────────────────── */}
+    {countdownActive && <Countdown onEnd={() => {}} />}
+
+    {/* ─── Progression Vidéo ───────────────────────────────── */}
+    {currentVideoId && (
+      <div className="progress-bar-container">
+        <div
+          className="progress-bar"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+    )}
+
+    {/* ─── Lecteur YouTube ────────────────────────────────── */}
+    {currentVideoId && (
+      <YouTube
+        videoId={currentVideoId}
+        opts={{
+          height: "360",
+          width: "640",
+          playerVars: { autoplay: 1 }
+        }}
+        onReady={(e) => {
+          playerRef.current = e.target;
+          e.target.setVolume(volume);
+          isMuted ? e.target.mute() : e.target.unMute();
+        }}
+      />
+    )}
+
+    {/* ─── Contrôle du Volume ──────────────────────────────── */}
+    <div style={{ margin: "1rem 0" }}>
+      <input
+        type="range"
+        min="0"
+        max="100"
+        value={volume}
+        onChange={handleVolumeChange}
+      />
+      <button onClick={toggleMute}>
+        {isMuted ? "🔇" : "🔊"}
+      </button>
+    </div>
+
+    {/* ─── Progression de la Manche ────────────────────────── */}
+    <h3>
+      Progression sur la chanson :{" "}
+      {Object.values(validatedTypes).flat().length} / 2
+    </h3>
+
+    {/* ─── Réponses à valider ──────────────────────────────── */}
+    <h3>Réponses à valider</h3>
+    <ul>
+      {guesses.map(({ pseudo, guess }, idx) => (
+        <li key={idx} style={{ marginBottom: "0.5rem" }}>
+          {pseudo} : {guess}
+          <button
+            onClick={() => handleValidate(guess, pseudo, "artiste")}
+            disabled={validatedTypes[pseudo]?.includes("artiste")}
+          >
+            ✅ Artiste
+          </button>
+          <button
+            onClick={() => handleValidate(guess, pseudo, "titre")}
+            disabled={validatedTypes[pseudo]?.includes("titre")}
+          >
+            ✅ Titre
+          </button>
+          <button onClick={() => handleReject(guess, pseudo)}>❌</button>
+          <button onClick={() => handleCloseGuess(guess, pseudo)}>
+            🟡 Pas loin
+          </button>
+        </li>
+      ))}
+    </ul>
+
+    {/* ─── Classement ──────────────────────────────────────── */}
+    <h3>Classement</h3>
+    <ol className="score-animated">
+      {[...players]
+        .filter((p) => !p.admin)
+        .sort((a, b) => b.score - a.score)
+        .map((p, idx) => (
+          <li
+            key={p.pseudo}
+            className={`
+              ${p.pseudo === pseudo ? "current-player" : ""}
+              ${p.pseudo === flashPlayer ? "flash-guess" : ""}
+            `.trim()}
+          >
+            {idx === 0
+              ? "🥇 "
+              : idx === 1
+              ? "🥈 "
+              : idx === 2
+              ? "🥉 "
+              : ""}
+            {p.pseudo} — {p.score} pts
+          </li>
+        ))}
+    </ol>
+  </div>
+);
+
 
   const renderPlayer = () => (
     <div className="player">
@@ -448,7 +576,9 @@ const handleLaunchVideo = () => {
   value={guessInput}
   onChange={(e) => setGuessInput(e.target.value)}
   onKeyDown={handleGuessSubmit}
+  disabled={videoRevealed}    // ← bloqué dès le reveal
 />
+
       <h3>Historique</h3>
 <ul className="event-log">
   {eventLog.map((e, idx) => (
@@ -508,18 +638,39 @@ const handleLaunchVideo = () => {
     </li>
   ))}
 </ul>
+<button
+  onClick={() => {
+    socket.emit("restartGame", { roomCode });
+    setCurrentVideoId(null);
+    setGuesses([]);
+    setEventLog([]);
+    setValidatedTypes({});
+    setVideoRevealed(false);
+    setWinners([]);
+    setHistory([]);
+    setProgress(0);
+    setView(isAdmin ? "admin" : "player");
+  }}
+>
+  🔁 Relancer une partie
+</button>
     </div>
   );
 
   const renderHome = () => (
     <div className="home">
       <h1>🎵 Blind Test 🎵</h1>
-      <input
-        type="text"
-        placeholder="Pseudo"
-        value={pseudo}
-        onChange={(e) => setPseudo(e.target.value)}
-      />
+<input
+  type="text"
+  placeholder="Pseudo (max 20 caractères)"
+  value={pseudo}
+  onChange={(e) => {
+    if (e.target.value.length <= 20) {
+      setPseudo(e.target.value);
+    }
+  }}
+/>
+<small>{pseudo.length} / 20 caractères</small>
       <div>
         <button onClick={handleCreateRoom} disabled={loading}>
   Créer une partie

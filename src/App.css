@@ -441,3 +441,40 @@ button:disabled {
   color: #ffffff;
 }
 
+.event-log li.close {
+  background-color: rgba(241, 196, 15, 0.1);
+  border-left-color: #f1c40f;
+}
+
+.search-results {
+  list-style: none;
+  padding: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+}
+.search-results li:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* Wrapper pour la recherche + lien + boutons */
+.admin-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.admin-search input[type="text"] {
+  flex: 1 1 200px;
+  max-width: 300px;
+}
+
+.admin-search button {
+  flex: 0 0 auto;
+}
+
+
+
